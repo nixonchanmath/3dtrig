@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plane Angle Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F3EEE2;--sheet:#FBF8F1;--grid:#E6DECD;--ink:#1F1C17;--ink2:#6B6356;--mustard:#D4A12F;--teal:#2C7A74;--verm:#C4512F;--green:#2E6A39;}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--paper);color:var(--ink);font:15px/1.45 "IBM Plex Sans",system-ui,sans-serif}
+button{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 410px;height:100vh}
+.stage{position:relative;background-color:var(--sheet);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:26px 26px;border-right:2px solid var(--ink);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;outline:none}
+.stage:focus-visible{box-shadow:inset 0 0 0 3px var(--mustard)}
+#svg{width:100%;height:100%;display:block;cursor:grab}
+#svg.drag{cursor:grabbing}
+.ov{position:absolute;left:12px;right:12px;display:flex;gap:8px;pointer-events:none}
+.ov.top{top:12px}
+.ov.bot{bottom:12px;justify-content:space-between;align-items:flex-end}
+.tag{pointer-events:auto;background:var(--sheet);border:2px solid var(--ink);padding:6px 10px;font-size:13px;font-weight:600;max-width:100%}
+.tag.tool{background:var(--mustard)}
+.tag .muted{font-weight:400}
+.tag.btnish{cursor:pointer;box-shadow:3px 3px 0 var(--ink)}
+.tag.btnish:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.toast{position:absolute;left:50%;bottom:62px;transform:translateX(-50%);width:max-content;max-width:min(92%,520px);background:var(--ink);color:var(--sheet);padding:8px 12px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.bad{background:var(--verm)}
+.toast.good{background:var(--green)}
+.panel{overflow-y:auto;padding:14px 14px 28px;background:var(--paper)}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}
+.brand{font-family:"IBM Plex Serif",serif;font-style:italic;font-weight:600;font-size:21px}
+.stats{font-size:13px;color:var(--ink2);display:flex;gap:12px}
+.stats b{color:var(--ink);font-size:15px}
+.modes{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.mode{border:2px solid var(--ink);background:var(--sheet);padding:4px 10px;font-size:13px;cursor:pointer;font-weight:500}
+.mode[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
+.card{background:var(--sheet);border:2px solid var(--ink);padding:12px;margin-bottom:10px}
+.eyebrow{display:flex;justify-content:space-between;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);margin-bottom:6px;font-weight:600}
+.qtext{margin:0 0 8px}
+.ask{margin:0;font-family:"IBM Plex Serif",serif;font-size:17px;line-height:1.6}
+.pl{padding:0 4px;border-bottom:3px solid;white-space:nowrap}
+.pl.p1{background:rgba(212,161,47,.25);border-color:var(--mustard)}
+.pl.p2{background:rgba(44,122,116,.2);border-color:var(--teal)}
+.step{display:flex;align-items:center;gap:10px;padding:5px 0;opacity:.45}
+.step.on,.step.ok{opacity:1}
+.step .n{width:24px;height:24px;border:2px solid var(--ink);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.step.on .n{background:var(--mustard)}
+.step.ok .n{background:var(--green);color:#fff;border-color:var(--green)}
+.step .t{flex:1;font-size:14px}
+.slots{display:inline-flex;gap:4px;align-items:center;font-family:"IBM Plex Serif",serif;font-style:italic;font-size:18px}
+.slot{width:26px;height:28px;border-bottom:2px solid var(--ink);display:grid;place-items:center}
+.slot.f{border-color:var(--verm);color:var(--verm)}
+.sec{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);margin:0 0 8px;font-weight:600}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{border:2px solid var(--ink);background:var(--sheet);padding:7px 10px;box-shadow:3px 3px 0 var(--ink);cursor:pointer;font-weight:600;font-size:14px;text-align:left}
+.btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+.btn:focus-visible,.chip:focus-visible,.mode:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
+.btn.on{background:var(--mustard)}
+.btn.dark{background:var(--ink);color:var(--sheet)}
+.btn .sym{font-family:"IBM Plex Serif",serif;margin-right:6px;color:var(--verm)}
+.btn.on .sym{color:var(--ink)}
+.btn small{display:block;font-weight:400;font-size:12px;color:var(--ink2)}
+.btn.on small{color:var(--ink)}
+.howto{margin:10px 0 0;font-size:13px;padding:8px;border:2px dashed var(--ink);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.cons{list-style:none;padding:0;margin:10px 0 0;font-size:13px}
+.cons li{padding:4px 0;border-top:1px solid var(--grid)}
+.cons b{font-family:"IBM Plex Serif",serif;font-style:italic;color:var(--verm);font-size:15px}
+.msg{padding:8px 10px;border:2px solid var(--ink);border-left-width:6px;background:var(--sheet);margin-bottom:10px;font-size:14px}
+.msg.good{border-left-color:var(--green)}
+.msg.bad{border-left-color:var(--verm)}
+.hints{margin:0;padding-left:18px;font-size:14px}
+.hints li{margin:4px 0}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.actions .btn{text-align:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-width:36px;height:36px;border:2px solid var(--ink);background:var(--sheet);font-family:"IBM Plex Serif",serif;font-style:italic;font-size:17px;cursor:pointer}
+.chip.a{border-style:dashed}
+.chip.c{color:var(--verm);border-color:var(--verm)}
+.chip.sel{background:var(--ink);color:var(--sheet)}
+.chip.tsel{background:var(--mustard);color:var(--ink)}
+.chip:disabled{opacity:.5;cursor:default}
+.explain{border-color:var(--green);border-left-width:6px}
+.explain h3{margin:0 0 6px;font-family:"IBM Plex Serif",serif;font-size:18px;color:var(--green)}
+.explain p{margin:6px 0;font-size:14px}
+.mth{font-family:"IBM Plex Serif",serif;font-style:italic}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{border-bottom:1px solid var(--grid);padding:5px 4px;text-align:left}
+.big{font-family:"IBM Plex Serif",serif;font-size:34px;font-weight:600}
+@media (max-width:860px){.app{grid-template-columns:1fr;height:auto}.stage{height:58vh;border-right:0;border-bottom:2px solid var(--ink)}.panel{overflow:visible}}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+.e{stroke:var(--ink);stroke-width:2;stroke-linecap:round}
+.eh{stroke:var(--ink2);stroke-width:1.5;stroke-dasharray:6 5}
+.gd{stroke:var(--ink2);stroke-width:1.3;stroke-dasharray:2 4;stroke-linecap:round}
+.cs{stroke:var(--verm);stroke-width:1.5;stroke-dasharray:6 4;opacity:.9}
+.ra{fill:none;stroke:var(--verm);stroke-width:1.4}
+.cl{stroke:var(--ink);stroke-width:3.5;stroke-linecap:round;opacity:.8}
+.arm{stroke:var(--verm);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.arm.bad{stroke-dasharray:7 5}
+.lab{font-family:"IBM Plex Serif",serif;font-style:italic;font-size:17px;fill:var(--ink);paint-order:stroke;stroke:var(--sheet);stroke-width:4px;stroke-linejoin:round}
+.lab.a{fill:var(--ink2)}
+.lab.c{fill:var(--verm);font-weight:600}
+.hit{fill:transparent;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage" id="stage" tabindex="0" aria-label="3D diagram. Drag or use arrow keys to rotate.">
+    <svg id="svg" role="img" aria-label="Rotatable 3D solid"></svg>
+    <div class="ov top" id="ovTop"></div>
+    <div class="toast" id="toast" aria-live="polite"></div>
+    <div class="ov bot"><div class="tag"><span class="muted">Drag to rotate</span></div><button class="tag btnish" id="resetView">Reset view</button></div>
+  </div>
+  <div class="panel" id="panel"></div>
+</div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const V={
+  sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],
+  add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],
+  mul:(a,k)=>[a[0]*k,a[1]*k,a[2]*k],
+  dot:(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],
+  cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
+  len:a=>Math.hypot(a[0],a[1],a[2])
+};
+V.unit=a=>{const l=V.len(a);return l?V.mul(a,1/l):a;};
+const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const fmt=x=>(+x.toFixed(1)).toString();
+const POOL='KMNRSTUWXYZLJO';
+
+/* ---------- solids ---------- */
+function cuboid(w,d,h){return {pts:{A:[0,0,0],B:[w,0,0],C:[w,d,0],D:[0,d,0],E:[0,0,h],F:[w,0,h],G:[w,d,h],H:[0,d,h]},faces:['ABCD','EFGH','ABFE','BCGF','CDHG','DAEH'],edges:['AB','BC','CD','DA','EF','FG','GH','HE','AE','BF','CG','DH']};}
+function prism(A,B,C,h){const up=p=>[p[0],p[1],p[2]+h];return {pts:{A,B,C,D:up(A),E:up(B),F:up(C)},faces:['ABC','DEF','ABED','BCFE','CADF'],edges:['AB','BC','CA','DE','EF','FD','AD','BE','CF']};}
+function pyramid(w,d,Vp){return {pts:{A:[0,0,0],B:[w,0,0],C:[w,d,0],D:[0,d,0],V:Vp},faces:['ABCD','VAB','VBC','VCD','VDA'],edges:['AB','BC','CD','DA','VA','VB','VC','VD']};}
+function tetra(B,C,D,A){return {pts:{A,B,C,D},faces:['BCD','ABC','ACD','ABD'],edges:['BC','CD','DB','AB','AC','AD']};}
+
+/* ---------- question bank ---------- */
+const BANK=[
+{lvl:1,make(){
+  const c=ri(7,9),ax=ri(2,3),ay=ri(4,6),h=ri(4,6);
+  return {solid:prism([ax,ay,0],[0,0,0],[c,0,0],h),
+   text:'ABCDEF is a right prism with base triangle ABC (scalene). AD, BE and CF are vertical edges.',p1:'DBC',p2:'ABC',
+   hints:['Planes DBC and ABC share the edge BC, so BC is the common line.','Nothing on BC is labelled yet. In plane ABC, drop a perpendicular from A to BC: choose “Foot on a line”, tap A, then B and C.','AD is vertical, so the line from D to that new foot is also ⊥ BC. Use the foot as the vertex.'],
+   note:'AD ⊥ plane ABC and the foot from A is ⊥ BC, so the line from D to the same foot is ⊥ BC too (three perpendiculars).',
+   sol:{cons:[['foot','A','B','C']],line:['B','C'],angle:['D','$0','A']}};
+}},
+{lvl:1,make(){
+  const w=ri(7,9),d=ri(5,6),hx=ri(2,3),hy=pick([2,d-2]),h=ri(5,7);
+  const s=pyramid(w,d,[hx,hy,h]);s.pts.H=[hx,hy,0];
+  return {solid:s,aux:['H'],guides:[['V','H']],
+   text:'VABCD is a pyramid with a rectangular base. V is vertically above H, a point on the base that is not the centre.',p1:'VBC',p2:'ABCD',
+   hints:['Planes VBC and ABCD share the edge BC.','H is directly below V. Drop a perpendicular from H to BC with “Foot on a line”.','The line from V to that foot is also ⊥ BC, because VH is vertical.'],
+   note:'VH ⊥ base and the foot from H is ⊥ BC, so the line from V to that foot is ⊥ BC as well.',
+   sol:{cons:[['foot','H','B','C']],line:['B','C'],angle:['V','$0','H']}};
+}},
+{lvl:2,make(){
+  const c=ri(6,8),ax=-ri(2,3),ay=ri(3,5),h=ri(4,6);
+  return {solid:prism([ax,ay,0],[0,0,0],[c,0,0],h),
+   text:'ABCDEF is a right prism. In the base triangle ABC, ∠ABC is obtuse. AD, BE and CF are vertical.',p1:'DBC',p2:'ABC',
+   hints:['The common line is BC. Think about where a perpendicular from A would land.','Because ∠ABC is obtuse, the foot of the perpendicular from A lies on CB produced, outside the prism. Use “Foot on a line”: A, then B, C.','Join D to that foot. The angle sits outside the solid.'],
+   note:'The foot from A lands on CB produced. AD is vertical, so the line from D to the foot is ⊥ BC as well.',
+   sol:{cons:[['foot','A','B','C']],line:['B','C'],angle:['D','$0','A']}};
+}},
+{lvl:2,make(){
+  const c=ri(7,9),dx=ri(5,6),dy=ri(5,7),ax=ri(4,5),h=ri(5,7);
+  return {solid:tetra([0,0,0],[c,0,0],[dx,dy,0],[ax,2,h]),
+   text:'ABCD is an irregular tetrahedron with base BCD on the ground. A is above the base, but the point directly below A is not labelled.',p1:'ABC',p2:'BCD',
+   hints:['The common line is BC.','First find the point directly below A: choose “Foot on a plane”, tap A, then B, C, D.','Now drop a perpendicular from that new point to BC. The angle joins A, the second foot, and the first foot.'],
+   note:'A to its foot on the base is vertical; the perpendicular from that foot to BC then makes the line from A ⊥ BC too.',
+   sol:{cons:[['footp','A','B','C','D'],['foot','$0','B','C']],line:['B','C'],angle:['A','$1','$0']}};
+}},
+{lvl:2,make(){
+  const w=ri(7,9),d=ri(4,5),h=ri(4,6);
+  return {solid:cuboid(w,d,h),guides:[['B','D'],['B','E'],['D','E']],
+   text:'ABCDEFGH is a cuboid; E, F, G, H are above A, B, C, D. The base is not a square.',p1:'BDE',p2:'ABCD',
+   hints:['Both planes contain B and D, so the common line is BD.','Nothing on BD is labelled. Drop a perpendicular from A to BD.','AE is vertical, so E to that foot is ⊥ BD too.'],
+   note:'Because AB ≠ AD, the foot from A is not the centre of the base. The midpoint of BD would give a wrong answer.',
+   sol:{cons:[['foot','A','B','D']],line:['B','D'],angle:['E','$0','A']}};
+}},
+{lvl:3,make(){
+  const w=ri(7,9),d=ri(5,6),hx=ri(2,3),hy=pick([2,d-2]),h=ri(5,7);
+  const f=pick(['VBC','VCD']),e=f.slice(1);
+  return {solid:pyramid(w,d,[hx,hy,h]),
+   text:'VABCD has a rectangular base. V is vertically above some point of the base. That point is not labelled and is not the centre.',p1:f,p2:'ABCD',
+   hints:['The common line is '+e+'.','Find the point directly below V: “Foot on a plane”, tap V, then three corners of the base.','Drop a perpendicular from that point to '+e+', then join V to the new foot.'],
+   note:'V to its foot is vertical. The perpendicular from that foot to '+e+' gives the arm in the base, and the line from V is then ⊥ '+e+' too.',
+   sol:{cons:[['footp','V','A','B','C'],['foot','$0',f[1],f[2]]],line:[f[1],f[2]],angle:['V','$1','$0']}};
+}},
+{lvl:3,make(){
+  const w=ri(7,9),d=ri(6,7),hx=ri(2,3),hy=pick([2,d-2]),h=ri(5,7);
+  return {solid:pyramid(w,d,[hx,hy,h]),
+   text:'VABCD has a rectangular base, and V is vertically above a point of the base that is not the centre. In the diagram, planes VAB and VCD meet only at V.',p1:'VAB',p2:'VCD',
+   hints:['Two planes always meet in a line. This one passes through V, but in which direction?','AB ∥ DC, so the common line is the line through V parallel to AB. Use “Parallel line”: V, then A, B.','In each plane, drop a perpendicular from V to the base edge (AB and DC). Both are ⊥ the common line.'],
+   note:'The common line is parallel to AB and DC, so a line ⊥ AB in plane VAB is also ⊥ the common line. The same is true in plane VCD.',
+   sol:{cons:[['par','V','A','B'],['foot','V','A','B'],['foot','V','D','C']],line:['V','$0'],angle:['$1','V','$2']}};
+}},
+{lvl:3,make(){
+  const w=ri(6,8),d=ri(4,5),h=ri(5,6);const [zp,zq]=pick([[1,3],[1,4],[1.5,4.5]]);
+  const s=cuboid(w,d,h);s.pts.P=[w,0,zp];s.pts.Q=[0,d,zq];
+  return {solid:s,aux:['P','Q'],guides:[['A','P'],['A','Q'],['P','Q']],
+   text:`ABCDEFGH is a cuboid; E, F, G, H are above A, B, C, D. P is on BF with BP = ${zp}, and Q is on DH with DQ = ${zq}.`,p1:'APQ',p2:'ABCD',
+   hints:['Inside the cuboid, plane APQ touches the base only at A. You need a second common point.','QP and DB lie in the same plane (BDHF). Extend them until they meet: “Extend 2 lines”, tap Q, P, then D, B.','Join A to that point. Then drop a perpendicular from B (directly below P) to the common line.'],
+   note:'PB is vertical and the foot from B is ⊥ the common line, so P to that foot is ⊥ it too.',
+   sol:{cons:[['meet','Q','P','D','B'],['foot','B','A','$0']],line:['A','$0'],angle:['P','$1','B']}};
+}},
+{lvl:4,make(){
+  const w=ri(6,8),d=ri(4,5);const [zp,zq]=pick([[2,1],[1.5,1],[2,1.5],[1,2]]);
+  const s=cuboid(w,d,6);s.pts.P=[w,0,zp];s.pts.Q=[0,d,zq];
+  return {solid:s,aux:['P','Q'],guides:[['E','P'],['E','Q'],['P','Q']],
+   text:`ABCDEFGH is a cuboid with AE = 6; E, F, G, H are above A, B, C, D. P is on BF with BP = ${zp}, and Q is on DH with DQ = ${zq}.`,p1:'EPQ',p2:'ABCD',
+   hints:['Plane EPQ and the base share no labelled point. Find two common points by extending lines.','EP and AB lie in face ABFE, so extend them to meet. EQ and AD lie in face ADHE, so extend those too.','Join the two new points: that is the common line. Then drop a perpendicular from A (directly below E) onto it.'],
+   note:'EA is vertical; the perpendicular from A to the common line makes the line from E to that foot ⊥ it too.',
+   sol:{cons:[['meet','E','P','A','B'],['meet','E','Q','A','D'],['foot','A','$0','$1']],line:['$0','$1'],angle:['E','$2','A']}};
+}},
+{lvl:4,make(){
+  const c=ri(7,8),dx=ri(4,5),dy=ri(5,6),ax=ri(4,5),h=ri(6,7);
+  const s=tetra([0,0,0],[c,0,0],[dx,dy,0],[ax,2,h]);
+  const r=pick([{s:1/2,t:1/4,txt:'P is the midpoint of AC, and Q is on AD with AQ : QD = 1 : 3.'},{s:2/3,t:1/3,txt:'P is on AC with AP : PC = 2 : 1, and Q is on AD with AQ : QD = 1 : 2.'}]);
+  const A=s.pts.A,C=s.pts.C,D=s.pts.D;
+  s.pts.P=V.add(A,V.mul(V.sub(C,A),r.s));s.pts.Q=V.add(A,V.mul(V.sub(D,A),r.t));
+  return {solid:s,aux:['P','Q'],guides:[['B','P'],['B','Q'],['P','Q']],
+   text:'ABCD is an irregular tetrahedron with base BCD on the ground. '+r.txt,p1:'BPQ',p2:'BCD',
+   hints:['In the diagram the planes share only B. QP and DC both lie in face ACD, so extend them to meet.','Join B to that point to get the common line. Now you need a point directly below P.','Use “Foot on a plane” from P onto BCD, then drop a perpendicular from that foot onto the common line.'],
+   note:'P to its foot on the base is vertical; the perpendicular from that foot to the common line makes the line from P ⊥ it too.',
+   sol:{cons:[['meet','Q','P','D','C'],['footp','P','B','C','D'],['foot','$1','B','$0']],line:['B','$0'],angle:['P','$2','$1']}};
+}},
+{lvl:4,make(){
+  const b=ri(6,8),cx=ri(2,3),cy=ri(4,6);const [zp,zq]=pick([[4,4.5],[4.5,4],[4,5]]);
+  const s=prism([0,0,0],[b,0,0],[cx,cy,0],6);s.pts.P=[b,0,zp];s.pts.Q=[cx,cy,zq];
+  return {solid:s,aux:['P','Q'],guides:[['A','P'],['A','Q'],['P','Q']],
+   text:`ABCDEF is a right prism with scalene base ABC. AD, BE, CF are vertical and AD = 6. P is on BE with BP = ${zp}, and Q is on CF with CQ = ${zq}.`,p1:'APQ',p2:'DEF',
+   hints:['Plane APQ does not reach the top face inside the prism. Extend lines of APQ up to the plane of DEF.','AP and DE lie in face ABED; AQ and DF lie in face ACFD. Extend each pair to meet.','Join the two new points. Then drop a perpendicular from D (directly above A) onto that line.'],
+   note:'DA is vertical; the perpendicular from D to the common line makes the line from A to that foot ⊥ it too.',
+   sol:{cons:[['meet','A','P','D','E'],['meet','A','Q','D','F'],['foot','D','$0','$1']],line:['$0','$1'],angle:['A','$2','D']}};
+}}
+];
+
+/* ---------- geometry helpers ---------- */
+function adj(f,a,b){const i=f.indexOf(a),j=f.indexOf(b);if(i<0||j<0)return false;const d=Math.abs(i-j);return d===1||d===f.length-1;}
+function planeOf(q,name){const P=name.split('').map(k=>q.pts[k]);return {n:V.unit(V.cross(V.sub(P[1],P[0]),V.sub(P[2],P[0]))),p:P[0]};}
+const onPlane=(pl,X)=>Math.abs(V.dot(pl.n,V.sub(X,pl.p)))<1e-5;
+const onLine=(X,A,B)=>V.len(V.cross(V.sub(X,A),V.unit(V.sub(B,A))))<1e-5;
+const perp=(X,Q,u)=>Math.abs(V.dot(V.unit(V.sub(X,Q)),u))<1e-5;
+
+function prep(T){
+  const q=T.make();q.lvl=T.lvl;q.pts={};q.kind={};
+  const aux=q.aux||[];
+  for(const k in q.solid.pts){q.pts[k]=q.solid.pts[k].slice();q.kind[k]=aux.includes(k)?'a':'v';}
+  const vn=Object.keys(q.pts).filter(k=>q.kind[k]==='v');
+  q.cen=V.mul(vn.reduce((s,k)=>V.add(s,q.pts[k]),[0,0,0]),1/vn.length);
+  q.faces=q.solid.faces.map(f=>{const P=f.split('').map(k=>q.pts[k]);let n=V.unit(V.cross(V.sub(P[1],P[0]),V.sub(P[2],P[0])));if(V.dot(n,V.sub(P[0],q.cen))<0)n=V.mul(n,-1);return {f,n};});
+  q.edges=q.solid.edges.map(e=>({a:e[0],b:e[1],fs:q.faces.map((F,i)=>adj(F.f,e[0],e[1])?i:-1).filter(i=>i>=0)}));
+  q.guides=q.guides||[];
+  q.pl1=planeOf(q,q.p1);q.pl2=planeOf(q,q.p2);
+  return q;
+}
+
+/* ---------- state ---------- */
+const st={mode:'mixed',round:[],qi:0,q:null,score:0,streak:0,hist:[],summary:false,
+  step:1,sel:[],line:null,wrong1:0,wrong2:0,hints:0,revealed:false,done:false,
+  tool:null,tsel:[],cons:[],msg:null,lock:false,bad:false,tok:0,lastPts:0,yaw:-0.55,pitch:0.42};
+
+const TOOLS={
+  foot:{n:3,sym:'⊥',name:'Foot on a line',sub:'point → line',how:'Tap the point, then 2 points on the line.'},
+  footp:{n:4,sym:'⊥',name:'Foot on a plane',sub:'point → plane',how:'Tap the point, then 3 points in the plane.'},
+  meet:{n:4,sym:'×',name:'Extend 2 lines',sub:'find where they meet',how:'Tap 2 points on the first line, then 2 points on the second line.'},
+  par:{n:3,sym:'∥',name:'Parallel line',sub:'through a point',how:'Tap the point, then 2 points on the line to copy.'}
+};
+
+function construct(type,a){
+  const q=st.q,P=a.map(n=>q.pts[n]);let X,segs=[],mark=null,desc;
+  if(type==='foot'||type==='par'){
+    const [p,l1,l2]=P;
+    if(onLine(p,l1,l2))return {err:type==='foot'?`${a[0]} is already on line ${a[1]}${a[2]}. Pick a point off the line.`:`${a[0]} is already on ${a[1]}${a[2]}, so the parallel line would just be ${a[1]}${a[2]}.`};
+    const u=V.unit(V.sub(l2,l1));
+    if(type==='foot'){
+      const t=V.dot(V.sub(p,l1),u),L=V.len(V.sub(l2,l1));X=V.add(l1,V.mul(u,t));
+      const out=t<-1e-6||t>L+1e-6;
+      segs.push([a[0],'@']);if(t<-1e-6)segs.push([a[1],'@']);else if(t>L+1e-6)segs.push([a[2],'@']);
+      mark={to:a[0],along:V.len(V.sub(l1,X))>V.len(V.sub(l2,X))?a[1]:a[2]};
+      desc=`foot of ⊥ from ${a[0]} to ${a[1]}${a[2]}${out?' produced':''}`;
+    }else{X=V.add(p,V.mul(u,4));segs.push([a[0],'@','par']);desc=`point on the line through ${a[0]} ∥ ${a[1]}${a[2]}`;}
+  }else if(type==='footp'){
+    const [p,a1,a2,a3]=P,nn=V.cross(V.sub(a2,a1),V.sub(a3,a1));
+    if(V.len(nn)<1e-6)return {err:`${a[1]}, ${a[2]}, ${a[3]} are on one line, so they don't fix a plane.`};
+    const n=V.unit(nn),dd=V.dot(V.sub(p,a1),n);
+    if(Math.abs(dd)<1e-5)return {err:`${a[0]} already lies in plane ${a[1]}${a[2]}${a[3]}.`};
+    X=V.sub(p,V.mul(n,dd));segs.push([a[0],'@']);desc=`foot of ⊥ from ${a[0]} to plane ${a[1]}${a[2]}${a[3]}`;
+  }else{
+    const [l1,l2,m1,m2]=P,d=V.sub(l2,l1),e=V.sub(m2,m1),c=V.cross(d,e),w=V.sub(m1,l1);
+    if(V.len(c)<1e-6*V.len(d)*V.len(e))return {err:`${a[0]}${a[1]} and ${a[2]}${a[3]} are parallel (or the same line), so they never meet in one point.`};
+    if(Math.abs(V.dot(w,c))/V.len(c)>1e-5)return {err:`${a[0]}${a[1]} and ${a[2]}${a[3]} are skew (not in one plane), so they never meet. Choose two lines in the same face or plane.`};
+    const cc=V.dot(c,c),s=V.dot(V.cross(w,e),c)/cc,t=V.dot(V.cross(w,d),c)/cc;X=V.add(l1,V.mul(d,s));
+    if(s<-1e-6||s>1+1e-6)segs.push([Math.abs(s)<Math.abs(s-1)?a[0]:a[1],'@']);
+    if(t<-1e-6||t>1+1e-6)segs.push([Math.abs(t)<Math.abs(t-1)?a[2]:a[3],'@']);
+    desc=`where ${a[0]}${a[1]} meets ${a[2]}${a[3]}${segs.length?' (lines extended)':''}`;
+  }
+  return {X,segs,mark,desc};
+}
+function ensure(type,args){
+  const r=construct(type,args);if(r.err)return r;const q=st.q;
+  for(const k in q.pts)if(V.len(V.sub(q.pts[k],r.X))<1e-5)return {name:k,existed:true};
+  const name=POOL.split('').find(c=>!(c in q.pts));
+  if(!name)return {err:'No letters left. Undo a construction first.'};
+  q.pts[name]=r.X;q.kind[name]='c';
+  st.cons.push({name,type,args:args.slice(),desc:r.desc,segs:r.segs.map(s=>s.map(x=>x==='@'?name:x)),mark:r.mark?{at:name,to:r.mark.to,along:r.mark.along}:null});
+  return {name};
+}
+
+/* ---------- rounds ---------- */
+const MODES={mixed:{label:'Mixed (8)'},hard:{label:'Hard only (6)'},challenge:{label:'Challenge (3)'}};
+function newRound(){
+  const by=l=>shuffle(BANK.filter(b=>b.lvl===l));let r;
+  if(st.mode==='challenge')r=by(4);
+  else if(st.mode==='hard')r=by(3).concat(by(4));
+  else r=by(1).slice(0,1).concat(by(2).slice(0,2),by(3),by(4).slice(0,2));
+  st.round=r;st.qi=0;st.score=0;st.streak=0;st.hist=[];st.summary=false;loadQ();
+}
+function loadQ(){
+  st.q=prep(st.round[st.qi]);
+  Object.assign(st,{step:1,sel:[],line:null,wrong1:0,wrong2:0,hints:0,revealed:false,done:false,tool:null,tsel:[],cons:[],msg:null,lock:false,bad:false,yaw:-0.55,pitch:0.42});
+  render();
+}
+async function setMode(m){
+  if(m===st.mode)return;
+  if(!st.summary&&(st.qi>0||st.sel.length||st.cons.length)){
+    const ok=window.zense&&zense.confirm?await zense.confirm('Start a new round? Progress in this round will be lost.'):confirm('Start a new round? Progress in this round will be lost.');
+    if(!ok)return;
+  }
+  st.mode=m;newRound();
+}
+
+/* ---------- interaction ---------- */
+function toast(t,kind){const el=$('#toast');el.textContent=t;el.className='toast show '+(kind||'');clearTimeout(toast.h);toast.h=setTimeout(()=>el.className='toast',2600);}
+function failFlash(){st.bad=true;st.lock=true;render();setTimeout(()=>{st.bad=false;st.lock=false;st.sel=[];render();},950);}
+function tap(n){
+  if(st.lock||st.done||st.summary)return;
+  if(st.tool){
+    const i=st.tsel.indexOf(n);
+    if(i>=0)st.tsel.splice(i,1);else st.tsel.push(n);
+    if(st.tsel.length===TOOLS[st.tool].n){
+      const r=ensure(st.tool,st.tsel);
+      if(r.err){toast(r.err,'bad');st.tsel=[];}
+      else if(r.existed){toast('That point is already labelled '+r.name+'.');st.tsel=[];st.tool=null;}
+      else{const c=st.cons[st.cons.length-1];toast('New point '+r.name+': '+c.desc,'good');st.tsel=[];st.tool=null;}
+    }
+    render();return;
+  }
+  if(st.sel.includes(n)){
+    if(st.sel[st.sel.length-1]===n)st.sel.pop();else{toast(n+' is already chosen.');return;}
+    render();return;
+  }
+  st.sel.push(n);
+  if(st.step===1&&st.sel.length===2)return check1();
+  if(st.step===2&&st.sel.length===3)return check2();
+  render();
+}
+function check1(){
+  const q=st.q,[a,b]=st.sel;
+  for(const x of [a,b]){
+    const i1=onPlane(q.pl1,q.pts[x]),i2=onPlane(q.pl2,q.pts[x]);
+    if(!i1||!i2){
+      st.wrong1++;
+      st.msg={k:'bad',t:`${x} is not in plane ${!i1?q.p1:q.p2}. A point on the common line must lie in both planes.`+(st.cons.length?'':' If no labelled point works, construct one first (see Tools).')};
+      return failFlash();
+    }
+  }
+  st.line=[a,b];st.step=2;st.sel=[];
+  st.msg={k:'good',t:`Common line: ${a}${b}. Now build the angle: arm end, vertex on ${a}${b}, other arm end.`};
+  render();
+}
+function lineU(){const q=st.q;return V.unit(V.sub(q.pts[st.line[1]],q.pts[st.line[0]]));}
+function angleErr(X,Q,Y){
+  const q=st.q,P=q.pts,L0=P[st.line[0]],L1=P[st.line[1]],u=lineU(),ln=st.line.join('');
+  if(!onLine(P[Q],L0,L1))return `The vertex ${Q} is not on the common line ${ln}.`;
+  for(const z of [X,Y])if(onLine(P[z],L0,L1))return `${z} is on ${ln}, so the arm ${Q}${z} runs along the common line.`;
+  const a1=onPlane(q.pl1,P[X]),a2=onPlane(q.pl2,P[X]),b1=onPlane(q.pl1,P[Y]),b2=onPlane(q.pl2,P[Y]);
+  for(const [z,i,j] of [[X,a1,a2],[Y,b1,b2]])if(!i&&!j)return `${z} is in neither plane ${q.p1} nor plane ${q.p2}.`;
+  if(!((a1&&b2)||(a2&&b1)))return `Both arms lie in plane ${a1?q.p1:q.p2}. Take one arm in each plane.`;
+  for(const z of [X,Y])if(!perp(P[z],P[Q],u))return `${Q}${z} is not perpendicular to ${ln}. Each arm must be ⊥ the common line. You may need to construct a foot of perpendicular.`;
+  if(V.dot(V.sub(P[X],P[Q]),V.sub(P[Y],P[Q]))<-1e-6)return `Good construction, but this angle is obtuse. The angle between two planes is the acute one.`;
+  return null;
+}
+function check2(){
+  const e=angleErr(...st.sel);
+  if(e){st.wrong2++;st.msg={k:'bad',t:e};return failFlash();}
+  finish();
+}
+function deg(X,Q,Y){const P=st.q.pts;return Math.acos(Math.max(-1,Math.min(1,V.dot(V.unit(V.sub(P[X],P[Q])),V.unit(V.sub(P[Y],P[Q]))))))*180/Math.PI;}
+function finish(){
+  const pts=st.revealed?0:Math.max(0,Math.max(2,10-4*st.wrong1)+Math.max(4,20-6*st.wrong2)-4*st.hints);
+  const clean=!st.wrong1&&!st.wrong2&&!st.hints&&!st.revealed;
+  st.streak=clean?st.streak+1:0;st.score+=pts;st.lastPts=pts;
+  const [X,Q,Y]=st.sel;
+  st.hist.push({p:st.q.p1+' / '+st.q.p2,ans:'∠'+X+Q+Y,pts,clean});
+  st.done=true;st.msg=null;st.tool=null;render();
+}
+function reveal(){
+  const q=st.q,map=[],res=x=>x[0]==='$'?map[+x.slice(1)]:x;
+  for(const c of q.sol.cons){const r=ensure(c[0],c.slice(1).map(res));map.push(r.name);}
+  st.line=q.sol.line.map(res);st.step=2;st.sel=q.sol.angle.map(res);st.revealed=true;finish();
+}
+function undoCons(){
+  const c=st.cons.pop();if(!c)return;delete st.q.pts[c.name];delete st.q.kind[c.name];
+  if(st.line&&st.line.includes(c.name)){st.line=null;st.step=1;}
+  st.sel=[];st.tsel=[];render();
+}
+function others(){
+  const q=st.q,P=q.pts,names=Object.keys(P),u=lineU(),L0=P[st.line[0]],L1=P[st.line[1]],out=[];
+  const me=st.sel.join(''),me2=st.sel.slice().reverse().join('');
+  for(const Q of names){if(!onLine(P[Q],L0,L1))continue;
+    for(const X of names)for(const Y of names){
+      if(X===Y||X===Q||Y===Q||onLine(P[X],L0,L1)||onLine(P[Y],L0,L1))continue;
+      if(!(onPlane(q.pl1,P[X])&&onPlane(q.pl2,P[Y])))continue;
+      if(!perp(P[X],P[Q],u)||!perp(P[Y],P[Q],u))continue;
+      if(V.dot(V.sub(P[X],P[Q]),V.sub(P[Y],P[Q]))<-1e-6)continue;
+      const s=X+Q+Y;if(s!==me&&s!==me2)out.push('∠'+s);
+    }}
+  return out.slice(0,4);
+}
+
+/* ---------- drawing ---------- */
+function hull(p){p=p.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);if(p.length<3)return p;const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);const lo=[],up=[];for(const x of p){while(lo.length>1&&cr(lo[lo.length-2],lo[lo.length-1],x)<=0)lo.pop();lo.push(x);}for(let i=p.length-1;i>=0;i--){const x=p[i];while(up.length>1&&cr(up[up.length-2],up[up.length-1],x)<=0)up.pop();up.push(x);}up.pop();lo.pop();return lo.concat(up);}
+function draw(){
+  const svg=$('#svg'),W=svg.clientWidth||600,H=svg.clientHeight||400,q=st.q;if(!q)return;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const P=q.pts,names=Object.keys(P);
+  const mn=[0,1,2].map(i=>Math.min(...names.map(k=>P[k][i]))),mx=[0,1,2].map(i=>Math.max(...names.map(k=>P[k][i])));
+  const c0=mn.map((v,i)=>(v+mx[i])/2),R=Math.max(1,...names.map(k=>V.len(V.sub(P[k],c0))));
+  const sc=Math.min(W,H)*0.44/R,cy=Math.cos(st.yaw),sy=Math.sin(st.yaw),cp=Math.cos(st.pitch),sp=Math.sin(st.pitch);
+  const pr=p=>{const x=p[0]-c0[0],y=p[1]-c0[1],z=p[2]-c0[2],x1=x*cy-y*sy,y1=x*sy+y*cy;return [W/2+x1*sc,H/2-(z*cp+y1*sp)*sc];};
+  const S={};names.forEach(k=>S[k]=pr(P[k]));
+  const vis=q.faces.map(F=>{const n=F.n;return ((n[0]*sy+n[1]*cy)*cp-n[2]*sp)<0;});
+  const L=(a,b,c,extra)=>`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" class="${c}" ${extra||''}/>`;
+  let o='';
+  [[q.pl1,'#D4A12F'],[q.pl2,'#2C7A74']].forEach(([pl,col])=>{
+    const h=hull(names.filter(k=>onPlane(pl,P[k])).map(k=>S[k]));
+    if(h.length>2)o+=`<polygon points="${h.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="${col}" fill-opacity=".22" stroke="${col}" stroke-opacity=".7" stroke-width="1"/>`;
+  });
+  q.edges.forEach(e=>{if(e.fs.length&&e.fs.every(i=>!vis[i]))o+=L(S[e.a],S[e.b],'eh');});
+  q.edges.forEach(e=>{if(!(e.fs.length&&e.fs.every(i=>!vis[i])))o+=L(S[e.a],S[e.b],'e');});
+  q.guides.forEach(g=>o+=L(S[g[0]],S[g[1]],'gd'));
+  st.cons.forEach(c=>{
+    c.segs.forEach(s=>{if(s[2]==='par'){const a=P[s[0]],b=P[s[1]],u=V.unit(V.sub(b,a));o+=L(pr(V.sub(a,V.mul(u,3))),pr(V.add(b,V.mul(u,1))),'cs');}else o+=L(S[s[0]],S[s[1]],'cs');});
+    if(c.mark){const X=P[c.mark.at],a=V.unit(V.sub(P[c.mark.to],X)),b=V.unit(V.sub(P[c.mark.along],X)),m=R*0.06;
+      const p1=pr(V.add(X,V.mul(a,m))),p2=pr(V.add(X,V.add(V.mul(a,m),V.mul(b,m)))),p3=pr(V.add(X,V.mul(b,m)));
+      o+=`<path d="M${p1}L${p2}L${p3}" class="ra"/>`;}
+  });
+  if(st.line){const a=P[st.line[0]],b=P[st.line[1]],u=V.unit(V.sub(b,a)),ex=R*0.35;o+=L(pr(V.sub(a,V.mul(u,ex))),pr(V.add(b,V.mul(u,ex))),'cl');}
+  else if(st.step===1&&st.sel.length===2)o+=L(S[st.sel[0]],S[st.sel[1]],'arm'+(st.bad?' bad':''));
+  if(st.step===2&&st.sel.length>=2)o+=`<polyline points="${st.sel.map(k=>S[k].map(v=>v.toFixed(1)).join(',')).join(' ')}" class="arm${st.bad?' bad':''}"/>`;
+  if(st.done){
+    const [X,Q,Y]=st.sel,q0=P[Q],a=V.unit(V.sub(P[X],q0)),b=V.unit(V.sub(P[Y],q0)),r=Math.min(V.len(V.sub(P[X],q0)),V.len(V.sub(P[Y],q0)))*0.3;
+    const arc=[];for(let i=0;i<=14;i++){const t=i/14;arc.push(pr(V.add(q0,V.mul(V.unit(V.add(V.mul(a,1-t),V.mul(b,t))),r))));}
+    o+=`<polyline points="${arc.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#C4512F" stroke-width="2"/>`;
+    const lp=pr(V.add(q0,V.mul(V.unit(V.add(a,b)),r*1.6)));o+=`<text x="${lp[0]}" y="${lp[1]}" class="lab c" text-anchor="middle" dy=".35em">θ</text>`;
+  }
+  const cs=pr(q.cen);
+  names.forEach(k=>{
+    const s=S[k],kd=q.kind[k];
+    if(st.sel.includes(k)||(st.line&&st.line.includes(k)&&!st.done))o+=`<circle cx="${s[0]}" cy="${s[1]}" r="10" fill="none" stroke="${st.sel.includes(k)?'#C4512F':'#1F1C17'}" stroke-width="2"/>`;
+    if(st.tsel.includes(k))o+=`<circle cx="${s[0]}" cy="${s[1]}" r="11" fill="#D4A12F" fill-opacity=".5" stroke="#1F1C17" stroke-width="2"/>`;
+    o+=`<circle cx="${s[0]}" cy="${s[1]}" r="4" fill="${kd==='v'?'#1F1C17':kd==='c'?'#C4512F':'#FBF8F1'}" stroke="${kd==='c'?'#C4512F':'#1F1C17'}" stroke-width="1.6"/>`;
+    let dx=s[0]-cs[0],dy=s[1]-cs[1],dl=Math.hypot(dx,dy);if(dl<1){dx=0;dy=-1;dl=1;}
+    o+=`<text x="${(s[0]+dx/dl*16).toFixed(1)}" y="${(s[1]+dy/dl*16).toFixed(1)}" class="lab ${kd==='v'?'':kd}" text-anchor="middle" dy=".35em">${k}</text>`;
+  });
+  names.forEach(k=>o+=`<circle cx="${S[k][0]}" cy="${S[k][1]}" r="17" class="hit" data-pt="${k}"><title>${k}</title></circle>`);
+  svg.innerHTML=o;
+  let ov='';
+  if(st.tool){const T=TOOLS[st.tool];ov=`<div class="tag tool">${T.sym} ${T.name}: <span class="muted">${T.how}</span> ${st.tsel.length}/${T.n}</div>`;}
+  else if(!st.done&&!st.summary)ov=`<div class="tag">${st.step===1?'Step 1 · tap 2 points on the common line':'Step 2 · tap arm end, vertex, arm end'}</div>`;
+  $('#ovTop').innerHTML=ov;
+}
+
+/* ---------- panel ---------- */
+const lvlStr=l=>l===4?'■■■■ Challenge':'■'.repeat(l)+'□'.repeat(4-l);
+const plh=(n,i)=>`<span class="pl p${i}">${n}</span>`;
+function modeRow(){return `<div class="modes" role="group" aria-label="Round type">${Object.keys(MODES).map(m=>`<button class="mode" data-mode="${m}" data-fk="m${m}" aria-pressed="${st.mode===m}">${MODES[m].label}</button>`).join('')}</div>`;}
+function render(){
+  const fk=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.fk:null;
+  const pn=$('#panel');let h=`<div class="head"><div class="brand">Plane Angle Trainer</div><div class="stats"><span>Score <b>${st.score}</b></span><span>Streak <b>${st.streak}</b></span></div></div>`+modeRow();
+  if(st.summary){
+    const n=st.round.length,cl=st.hist.filter(x=>x.clean).length;
+    h+=`<div class="card"><div class="eyebrow"><span>Round complete</span></div><div class="big">${st.score}</div><p>${cl} of ${n} solved cleanly (no mistakes, no hints). ${cl===n?'Excellent work.':cl>=n/2?'Good. Try for a clean sweep.':'Review the hints and try again.'}</p>
+    <table><thead><tr><th>#</th><th>Planes</th><th>Answer</th><th>Pts</th></tr></thead><tbody>${st.hist.map((x,i)=>`<tr><td>${i+1}</td><td>${x.p}</td><td class="mth">${x.ans}</td><td>${x.pts}</td></tr>`).join('')}</tbody></table></div>
+    <div class="actions"><button class="btn dark" data-act="again" data-fk="again">New round</button></div>`;
+    pn.innerHTML=h;draw();return;
+  }
+  const q=st.q;
+  h+=`<div class="card"><div class="eyebrow"><span>Question ${st.qi+1} / ${st.round.length}</span><span aria-label="Level ${q.lvl}">${lvlStr(q.lvl)}</span></div><p class="qtext">${q.text}</p><p class="ask">Name the angle between plane ${plh(q.p1,1)} and plane ${plh(q.p2,2)}.</p></div>`;
+  const l=st.line||(st.step===1?st.sel:[]),ang=st.step===2?st.sel:[];
+  const sl=(arr,n)=>Array.from({length:n},(_,i)=>`<span class="slot ${arr[i]?'f':''}">${arr[i]||''}</span>`).join('');
+  h+=`<div class="card"><div class="step ${st.step===1?'on':'ok'}"><span class="n">${st.step>1?'✓':'1'}</span><span class="t">Common line</span><span class="slots">${sl(l,2)}</span></div>
+  <div class="step ${st.done?'ok':st.step===2?'on':''}"><span class="n">${st.done?'✓':'2'}</span><span class="t">Angle</span><span class="slots">∠${sl(ang,3)}</span></div></div>`;
+  h+=`<div class="card"><p class="sec">Construction tools</p><div class="tools">${Object.keys(TOOLS).map(k=>{const T=TOOLS[k];return `<button class="btn ${st.tool===k?'on':''}" data-tool="${k}" data-fk="t${k}" ${st.done?'disabled':''} aria-pressed="${st.tool===k}"><span class="sym">${T.sym}</span>${T.name}<small>${T.sub}</small></button>`;}).join('')}</div>`;
+  if(st.tool)h+=`<div class="howto"><span>${TOOLS[st.tool].how} <b>${st.tsel.join(', ')||'…'}</b></span><button class="btn" data-act="cancelTool" data-fk="ct">Cancel</button></div>`;
+  if(st.cons.length)h+=`<ul class="cons">${st.cons.map(c=>`<li><b>${c.name}</b> = ${c.desc}</li>`).join('')}</ul><div class="actions" style="margin:8px 0 0"><button class="btn" data-act="undoCons" data-fk="uc" ${st.done?'disabled':''}>Undo last point</button></div>`;
+  h+=`</div>`;
+  if(st.msg)h+=`<div class="msg ${st.msg.k}" role="status">${st.msg.t}</div>`;
+  if(st.hints)h+=`<div class="card"><p class="sec">Hints</p><ol class="hints">${q.hints.slice(0,st.hints).map(x=>`<li>${x}</li>`).join('')}</ol></div>`;
+  if(st.done){
+    const [X,Q,Y]=st.sel,o=others(),in1=onPlane(q.pl1,q.pts[X]);
+    h+=`<div class="card explain"><h3>∠${X}${Q}${Y} ≈ ${fmt(deg(X,Q,Y))}°</h3>
+    <p>Common line <span class="mth">${st.line.join('')}</span>. In plane ${in1?q.p1:q.p2}, <span class="mth">${Q}${X}</span> ⊥ <span class="mth">${st.line.join('')}</span>; in plane ${in1?q.p2:q.p1}, <span class="mth">${Q}${Y}</span> ⊥ <span class="mth">${st.line.join('')}</span>.</p><p>${q.note}</p>
+    ${o.length?`<p>Also accepted: <span class="mth">${o.join(', ')}</span></p>`:''}<p><b>${st.revealed?'Answer shown: 0 points.':'+'+st.lastPts+' points'}</b></p></div>`;
+  }
+  h+=`<div class="actions">`;
+  if(!st.done)h+=`<button class="btn" data-act="hint" data-fk="hint" ${st.hints>=q.hints.length?'disabled':''}>Hint (−4)</button><button class="btn" data-act="undo" data-fk="undo" ${st.sel.length?'':'disabled'}>Undo tap</button><button class="btn" data-act="reveal" data-fk="rev">Show answer</button>`;
+  else h+=`<button class="btn dark" data-act="next" data-fk="next">${st.qi+1<st.round.length?'Next question':'See results'}</button>`;
+  h+=`</div><div class="card"><p class="sec">Points (tap here or on the diagram)</p><div class="chips">${Object.keys(q.pts).map(k=>`<button class="chip ${q.kind[k]} ${st.sel.includes(k)?'sel':''} ${st.tsel.includes(k)?'tsel':''}" data-pt="${k}" data-fk="p${k}" ${st.done||st.lock?'disabled':''}>${k}</button>`).join('')}</div></div>`;
+  pn.innerHTML=h;
+  if(fk){const el=pn.querySelector(`[data-fk="${fk}"]`);if(el&&!el.disabled)el.focus();}
+  draw();
+}
+
+/* ---------- events ---------- */
+$('#panel').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b||b.disabled)return;
+  if(b.dataset.mode)return setMode(b.dataset.mode);
+  if(b.dataset.pt)return tap(b.dataset.pt);
+  if(b.dataset.tool){if(st.lock)return;st.tool=st.tool===b.dataset.tool?null:b.dataset.tool;st.tsel=[];return render();}
+  const a=b.dataset.act;
+  if(a==='cancelTool'){st.tool=null;st.tsel=[];render();}
+  else if(a==='undoCons')undoCons();
+  else if(a==='hint'){st.hints++;st.streak=0;render();}
+  else if(a==='undo'){st.sel.pop();render();}
+  else if(a==='reveal'){st.streak=0;reveal();}
+  else if(a==='next'){if(st.qi+1<st.round.length){st.qi++;loadQ();}else{st.summary=true;render();}}
+  else if(a==='again')newRound();
+});
+const svg=$('#svg');let drag=null;
+svg.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,moved:false,t:e.target};svg.setPointerCapture(e.pointerId);});
+svg.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  if(!drag.moved&&Math.hypot(dx,dy)<6)return;drag.moved=true;svg.classList.add('drag');
+  st.yaw+=dx*0.009;st.pitch=Math.max(-0.2,Math.min(1.45,st.pitch+dy*0.009));drag.x=e.clientX;drag.y=e.clientY;draw();});
+svg.addEventListener('pointerup',e=>{if(!drag)return;svg.classList.remove('drag');const d=drag;drag=null;
+  if(!d.moved){const pt=d.t&&d.t.dataset&&d.t.dataset.pt;if(pt)tap(pt);}});
+svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('drag');});
+$('#stage').addEventListener('keydown',e=>{const k=e.key;
+  if(k==='ArrowLeft')st.yaw-=0.1;else if(k==='ArrowRight')st.yaw+=0.1;
+  else if(k==='ArrowUp')st.pitch=Math.min(1.45,st.pitch+0.1);else if(k==='ArrowDown')st.pitch=Math.max(-0.2,st.pitch-0.1);else return;
+  e.preventDefault();draw();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&st.tool){st.tool=null;st.tsel=[];render();}});
+$('#resetView').addEventListener('click',()=>{st.yaw=-0.55;st.pitch=0.42;draw();});
+new ResizeObserver(()=>draw()).observe($('#stage'));
+newRound();
+})();
+</script>
+</body>
+</html>
