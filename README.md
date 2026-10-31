@@ -20,4 +20,6 @@ Open `index.html` in a browser, or serve it:
     python3 -m http.server 8000   # then visit http://localhost:8000
 
 ## Hosting
+Live: https://nixonchanmath.github.io/plane-angle-trainer/
+
 GitHub Pages: Settings → Pages → Build and deployment → Deploy from a branch → `main` / `(root)`.
