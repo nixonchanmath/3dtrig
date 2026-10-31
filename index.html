@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Plane Angle Trainer</title>
+<meta name="description" content="Practise finding the angle between two planes in prisms, pyramids, cuboids and tetrahedra.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23F3EEE2'/%3E%3Cpath d='M5 26L27 26M5 26L22 8' stroke='%231F1C17' stroke-width='3' fill='none'/%3E%3Cpath d='M15 26A10 10 0 0 0 12 19' stroke='%23C4512F' stroke-width='2.5' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
@@ -13,7 +15,7 @@
 html,body{margin:0;height:100%}
 body{background:var(--paper);color:var(--ink);font:15px/1.45 "IBM Plex Sans",system-ui,sans-serif}
 button{font:inherit;color:inherit}
-.app{display:grid;grid-template-columns:minmax(0,1fr) 410px;height:100vh}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 410px;height:100vh;height:100dvh}
 .stage{position:relative;background-color:var(--sheet);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:26px 26px;border-right:2px solid var(--ink);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;outline:none}
 .stage:focus-visible{box-shadow:inset 0 0 0 3px var(--mustard)}
 #svg{width:100%;height:100%;display:block;cursor:grab}
@@ -62,6 +64,7 @@ button{font:inherit;color:inherit}
 .btn:focus-visible,.chip:focus-visible,.mode:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
 .btn.on{background:var(--mustard)}
 .btn.dark{background:var(--ink);color:var(--sheet)}
+.btn.warn{background:var(--verm);color:#fff;border-color:var(--verm)}
 .btn .sym{font-family:"IBM Plex Serif",serif;margin-right:6px;color:var(--verm)}
 .btn.on .sym{color:var(--ink)}
 .btn small{display:block;font-weight:400;font-size:12px;color:var(--ink2)}
@@ -92,6 +95,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 td,th{border-bottom:1px solid var(--grid);padding:5px 4px;text-align:left}
 .big{font-family:"IBM Plex Serif",serif;font-size:34px;font-weight:600}
 @media (max-width:860px){.app{grid-template-columns:1fr;height:auto}.stage{height:58vh;border-right:0;border-bottom:2px solid var(--ink)}.panel{overflow:visible}}
+@media (hover:none){.kbd{display:none}}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 .e{stroke:var(--ink);stroke-width:2;stroke-linecap:round}
 .eh{stroke:var(--ink2);stroke-width:1.5;stroke-dasharray:6 5}
@@ -113,7 +117,7 @@ td,th{border-bottom:1px solid var(--grid);padding:5px 4px;text-align:left}
     <svg id="svg" role="img" aria-label="Rotatable 3D solid"></svg>
     <div class="ov top" id="ovTop"></div>
     <div class="toast" id="toast" aria-live="polite"></div>
-    <div class="ov bot"><div class="tag"><span class="muted">Drag to rotate</span></div><button class="tag btnish" id="resetView">Reset view</button></div>
+    <div class="ov bot"><div class="tag"><span class="muted">Drag to rotate<span class="kbd"> · type a letter to pick a point</span></span></div><button class="tag btnish" id="resetView">Reset view</button></div>
   </div>
   <div class="panel" id="panel"></div>
 </div>
@@ -134,6 +138,9 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const fmt=x=>(+x.toFixed(1)).toString();
 const POOL='KMNRSTUWXYZLJO';
+const BEST_KEY='pat-best-v1';
+const loadBest=()=>{try{return JSON.parse(localStorage.getItem(BEST_KEY))||{};}catch(e){return {};}};
+const saveBest=b=>{try{localStorage.setItem(BEST_KEY,JSON.stringify(b));}catch(e){}};
 
 /* ---------- solids ---------- */
 function cuboid(w,d,h){return {pts:{A:[0,0,0],B:[w,0,0],C:[w,d,0],D:[0,d,0],E:[0,0,h],F:[w,0,h],G:[w,d,h],H:[0,d,h]},faces:['ABCD','EFGH','ABFE','BCGF','CDHG','DAEH'],edges:['AB','BC','CD','DA','EF','FG','GH','HE','AE','BF','CG','DH']};}
@@ -265,7 +272,7 @@ function prep(T){
 /* ---------- state ---------- */
 const st={mode:'mixed',round:[],qi:0,q:null,score:0,streak:0,hist:[],summary:false,
   step:1,sel:[],line:null,wrong1:0,wrong2:0,hints:0,revealed:false,done:false,
-  tool:null,tsel:[],cons:[],msg:null,lock:false,bad:false,tok:0,lastPts:0,yaw:-0.55,pitch:0.42};
+  tool:null,tsel:[],cons:[],msg:null,lock:false,bad:false,tok:0,lastPts:0,yaw:-0.55,pitch:0.42,best:loadBest(),newBest:false,confirmReveal:false};
 
 const TOOLS={
   foot:{n:3,sym:'⊥',name:'Foot on a line',sub:'point → line',how:'Tap the point, then 2 points on the line.'},
@@ -325,13 +332,13 @@ function newRound(){
 }
 function loadQ(){
   st.q=prep(st.round[st.qi]);
-  Object.assign(st,{step:1,sel:[],line:null,wrong1:0,wrong2:0,hints:0,revealed:false,done:false,tool:null,tsel:[],cons:[],msg:null,lock:false,bad:false,yaw:-0.55,pitch:0.42});
+  Object.assign(st,{step:1,sel:[],line:null,wrong1:0,wrong2:0,hints:0,revealed:false,done:false,tool:null,tsel:[],cons:[],msg:null,lock:false,bad:false,confirmReveal:false,yaw:-0.55,pitch:0.42});st.tok++;
   render();
 }
-async function setMode(m){
+function setMode(m){
   if(m===st.mode)return;
   if(!st.summary&&(st.qi>0||st.sel.length||st.cons.length)){
-    const ok=window.zense&&zense.confirm?await zense.confirm('Start a new round? Progress in this round will be lost.'):confirm('Start a new round? Progress in this round will be lost.');
+    const ok=confirm('Start a new round? Progress in this round will be lost.');
     if(!ok)return;
   }
   st.mode=m;newRound();
@@ -339,7 +346,7 @@ async function setMode(m){
 
 /* ---------- interaction ---------- */
 function toast(t,kind){const el=$('#toast');el.textContent=t;el.className='toast show '+(kind||'');clearTimeout(toast.h);toast.h=setTimeout(()=>el.className='toast',2600);}
-function failFlash(){st.bad=true;st.lock=true;render();setTimeout(()=>{st.bad=false;st.lock=false;st.sel=[];render();},950);}
+function failFlash(){st.bad=true;st.lock=true;const t=++st.tok;render();setTimeout(()=>{if(t!==st.tok)return;st.bad=false;st.lock=false;st.sel=[];render();},950);}
 function tap(n){
   if(st.lock||st.done||st.summary)return;
   if(st.tool){
@@ -400,16 +407,17 @@ function finish(){
   st.streak=clean?st.streak+1:0;st.score+=pts;st.lastPts=pts;
   const [X,Q,Y]=st.sel;
   st.hist.push({p:st.q.p1+' / '+st.q.p2,ans:'∠'+X+Q+Y,pts,clean});
-  st.done=true;st.msg=null;st.tool=null;render();
+  st.done=true;st.msg=null;st.tool=null;st.tsel=[];st.confirmReveal=false;render();
 }
 function reveal(){
+  st.tok++;st.lock=false;st.bad=false;
   const q=st.q,map=[],res=x=>x[0]==='$'?map[+x.slice(1)]:x;
-  for(const c of q.sol.cons){const r=ensure(c[0],c.slice(1).map(res));map.push(r.name);}
+  for(const c of q.sol.cons){const r=ensure(c[0],c.slice(1).map(res));if(r.err){toast(r.err,'bad');return;}map.push(r.name);}
   st.line=q.sol.line.map(res);st.step=2;st.sel=q.sol.angle.map(res);st.revealed=true;finish();
 }
 function undoCons(){
   const c=st.cons.pop();if(!c)return;delete st.q.pts[c.name];delete st.q.kind[c.name];
-  if(st.line&&st.line.includes(c.name)){st.line=null;st.step=1;}
+  if(st.line&&st.line.includes(c.name)){st.line=null;st.step=1;st.msg={k:'bad',t:`Point ${c.name} was on your common line, so the line has been cleared. Choose the common line again.`};}
   st.sel=[];st.tsel=[];render();
 }
 function others(){
@@ -485,10 +493,10 @@ const plh=(n,i)=>`<span class="pl p${i}">${n}</span>`;
 function modeRow(){return `<div class="modes" role="group" aria-label="Round type">${Object.keys(MODES).map(m=>`<button class="mode" data-mode="${m}" data-fk="m${m}" aria-pressed="${st.mode===m}">${MODES[m].label}</button>`).join('')}</div>`;}
 function render(){
   const fk=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.fk:null;
-  const pn=$('#panel');let h=`<div class="head"><div class="brand">Plane Angle Trainer</div><div class="stats"><span>Score <b>${st.score}</b></span><span>Streak <b>${st.streak}</b></span></div></div>`+modeRow();
+  const pn=$('#panel');let h=`<div class="head"><div class="brand">Plane Angle Trainer</div><div class="stats"><span>Score <b>${st.score}</b></span>${st.best[st.mode]!=null?`<span>Best <b>${st.best[st.mode]}</b></span>`:''}<span>Streak <b>${st.streak}</b></span></div></div>`+modeRow();
   if(st.summary){
-    const n=st.round.length,cl=st.hist.filter(x=>x.clean).length;
-    h+=`<div class="card"><div class="eyebrow"><span>Round complete</span></div><div class="big">${st.score}</div><p>${cl} of ${n} solved cleanly (no mistakes, no hints). ${cl===n?'Excellent work.':cl>=n/2?'Good. Try for a clean sweep.':'Review the hints and try again.'}</p>
+    const n=st.round.length,cl=st.hist.filter(x=>x.clean).length,bst=st.best[st.mode];
+    h+=`<div class="card"><div class="eyebrow"><span>Round complete</span></div><div class="big">${st.score}</div><p>${st.newBest?'<b>New best for this round type!</b>':bst!=null?`Best for this round type: <b>${bst}</b>`:''}</p><p>${cl} of ${n} solved cleanly (no mistakes, no hints). ${cl===n?'Excellent work.':cl>=n/2?'Good. Try for a clean sweep.':'Review the hints and try again.'}</p>
     <table><thead><tr><th>#</th><th>Planes</th><th>Answer</th><th>Pts</th></tr></thead><tbody>${st.hist.map((x,i)=>`<tr><td>${i+1}</td><td>${x.p}</td><td class="mth">${x.ans}</td><td>${x.pts}</td></tr>`).join('')}</tbody></table></div>
     <div class="actions"><button class="btn dark" data-act="again" data-fk="again">New round</button></div>`;
     pn.innerHTML=h;draw();return;
@@ -512,7 +520,7 @@ function render(){
     ${o.length?`<p>Also accepted: <span class="mth">${o.join(', ')}</span></p>`:''}<p><b>${st.revealed?'Answer shown: 0 points.':'+'+st.lastPts+' points'}</b></p></div>`;
   }
   h+=`<div class="actions">`;
-  if(!st.done)h+=`<button class="btn" data-act="hint" data-fk="hint" ${st.hints>=q.hints.length?'disabled':''}>Hint (−4)</button><button class="btn" data-act="undo" data-fk="undo" ${st.sel.length?'':'disabled'}>Undo tap</button><button class="btn" data-act="reveal" data-fk="rev">Show answer</button>`;
+  if(!st.done)h+=`<button class="btn" data-act="hint" data-fk="hint" ${st.hints>=q.hints.length?'disabled':''}>Hint (−4)</button><button class="btn" data-act="undo" data-fk="undo" ${st.sel.length?'':'disabled'}>Undo tap</button><button class="btn ${st.confirmReveal?'warn':''}" data-act="reveal" data-fk="rev">${st.confirmReveal?'Sure? 0 points':'Show answer'}</button>`;
   else h+=`<button class="btn dark" data-act="next" data-fk="next">${st.qi+1<st.round.length?'Next question':'See results'}</button>`;
   h+=`</div><div class="card"><p class="sec">Points (tap here or on the diagram)</p><div class="chips">${Object.keys(q.pts).map(k=>`<button class="chip ${q.kind[k]} ${st.sel.includes(k)?'sel':''} ${st.tsel.includes(k)?'tsel':''}" data-pt="${k}" data-fk="p${k}" ${st.done||st.lock?'disabled':''}>${k}</button>`).join('')}</div></div>`;
   pn.innerHTML=h;
@@ -527,12 +535,14 @@ $('#panel').addEventListener('click',e=>{
   if(b.dataset.pt)return tap(b.dataset.pt);
   if(b.dataset.tool){if(st.lock)return;st.tool=st.tool===b.dataset.tool?null:b.dataset.tool;st.tsel=[];return render();}
   const a=b.dataset.act;
+  if(st.lock&&a!=='next'&&a!=='again')return;
+  if(a!=='reveal'&&st.confirmReveal)st.confirmReveal=false;
   if(a==='cancelTool'){st.tool=null;st.tsel=[];render();}
   else if(a==='undoCons')undoCons();
   else if(a==='hint'){st.hints++;st.streak=0;render();}
   else if(a==='undo'){st.sel.pop();render();}
-  else if(a==='reveal'){st.streak=0;reveal();}
-  else if(a==='next'){if(st.qi+1<st.round.length){st.qi++;loadQ();}else{st.summary=true;render();}}
+  else if(a==='reveal'){if(!st.confirmReveal){st.confirmReveal=true;render();}else{st.streak=0;reveal();}}
+  else if(a==='next'){if(st.qi+1<st.round.length){st.qi++;loadQ();}else{st.summary=true;const b0=st.best[st.mode];st.newBest=b0==null||st.score>b0;if(st.newBest){st.best[st.mode]=st.score;saveBest(st.best);}render();}}
   else if(a==='again')newRound();
 });
 const svg=$('#svg');let drag=null;
@@ -547,7 +557,13 @@ $('#stage').addEventListener('keydown',e=>{const k=e.key;
   if(k==='ArrowLeft')st.yaw-=0.1;else if(k==='ArrowRight')st.yaw+=0.1;
   else if(k==='ArrowUp')st.pitch=Math.min(1.45,st.pitch+0.1);else if(k==='ArrowDown')st.pitch=Math.max(-0.2,st.pitch-0.1);else return;
   e.preventDefault();draw();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&st.tool){st.tool=null;st.tsel=[];render();}});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(st.confirmReveal){st.confirmReveal=false;render();}else if(st.tool){st.tool=null;st.tsel=[];render();}return;}
+  if(e.metaKey||e.ctrlKey||e.altKey||!st.q||st.summary)return;
+  const k=e.key.length===1?e.key.toUpperCase():'';
+  if(k&&k in st.q.pts){e.preventDefault();tap(k);}
+  else if(e.key==='Backspace'&&!st.lock&&!st.done){e.preventDefault();if(st.tool&&st.tsel.length)st.tsel.pop();else st.sel.pop();render();}
+});
 $('#resetView').addEventListener('click',()=>{st.yaw=-0.55;st.pitch=0.42;draw();});
 new ResizeObserver(()=>draw()).observe($('#stage'));
 newRound();
