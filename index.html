@@ -40,6 +40,7 @@ button{font:inherit;color:inherit}
 .modes{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .mode{border:2px solid var(--ink);background:var(--sheet);padding:4px 10px;font-size:13px;cursor:pointer;font-weight:500}
 .mode[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
+.prog{display:flex;gap:4px;margin-bottom:10px}.prog i{flex:1;height:7px;border:1.5px solid var(--ink);background:var(--sheet)}.prog i.ok{background:var(--green);border-color:var(--green)}.prog i.meh{background:var(--mustard)}.prog i.cur{background:var(--ink)}
 .card{background:var(--sheet);border:2px solid var(--ink);padding:12px;margin-bottom:10px}
 .eyebrow{display:flex;justify-content:space-between;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);margin-bottom:6px;font-weight:600}
 .qtext{margin:0 0 8px}
@@ -94,7 +95,7 @@ button{font:inherit;color:inherit}
 table{width:100%;border-collapse:collapse;font-size:13px}
 td,th{border-bottom:1px solid var(--grid);padding:5px 4px;text-align:left}
 .big{font-family:"IBM Plex Serif",serif;font-size:34px;font-weight:600}
-@media (max-width:860px){.app{grid-template-columns:1fr;height:auto}.stage{height:58vh;border-right:0;border-bottom:2px solid var(--ink)}.panel{overflow:visible}}
+@media (max-width:860px){.app{grid-template-columns:1fr;height:auto}.stage{position:sticky;top:0;z-index:5;height:46vh;height:46svh;border-right:0;border-bottom:2px solid var(--ink)}.panel{overflow:visible}.explain{scroll-margin-top:calc(46svh + 10px)}}
 @media (hover:none){.kbd{display:none}}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 .e{stroke:var(--ink);stroke-width:2;stroke-linecap:round}
@@ -408,6 +409,8 @@ function finish(){
   const [X,Q,Y]=st.sel;
   st.hist.push({p:st.q.p1+' / '+st.q.p2,ans:'∠'+X+Q+Y,pts,clean});
   st.done=true;st.msg=null;st.tool=null;st.tsel=[];st.confirmReveal=false;render();
+  if(!st.revealed)toast(clean?`Correct, first try! +${pts} points`:`Correct! +${pts} points`,'good');
+  if(matchMedia('(max-width:860px)').matches){const ex=document.querySelector('.explain');if(ex)ex.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});}
 }
 function reveal(){
   st.tok++;st.lock=false;st.bad=false;
@@ -477,18 +480,18 @@ function draw(){
     if(st.tsel.includes(k))o+=`<circle cx="${s[0]}" cy="${s[1]}" r="11" fill="#D4A12F" fill-opacity=".5" stroke="#1F1C17" stroke-width="2"/>`;
     o+=`<circle cx="${s[0]}" cy="${s[1]}" r="4" fill="${kd==='v'?'#1F1C17':kd==='c'?'#C4512F':'#FBF8F1'}" stroke="${kd==='c'?'#C4512F':'#1F1C17'}" stroke-width="1.6"/>`;
     let dx=s[0]-cs[0],dy=s[1]-cs[1],dl=Math.hypot(dx,dy);if(dl<1){dx=0;dy=-1;dl=1;}
-    o+=`<text x="${(s[0]+dx/dl*16).toFixed(1)}" y="${(s[1]+dy/dl*16).toFixed(1)}" class="lab ${kd==='v'?'':kd}" text-anchor="middle" dy=".35em">${k}</text>`;
+    o+=`<text x="${(s[0]+dx/dl*21).toFixed(1)}" y="${(s[1]+dy/dl*21).toFixed(1)}" class="lab ${kd==='v'?'':kd}" text-anchor="middle" dy=".35em">${k}</text>`;
   });
   names.forEach(k=>o+=`<circle cx="${S[k][0]}" cy="${S[k][1]}" r="17" class="hit" data-pt="${k}"><title>${k}</title></circle>`);
   svg.innerHTML=o;
   let ov='';
   if(st.tool){const T=TOOLS[st.tool];ov=`<div class="tag tool">${T.sym} ${T.name}: <span class="muted">${T.how}</span> ${st.tsel.length}/${T.n}</div>`;}
-  else if(!st.done&&!st.summary)ov=`<div class="tag">${st.step===1?'Step 1 · tap 2 points on the common line':'Step 2 · tap arm end, vertex, arm end'}</div>`;
+  else if(!st.done&&!st.summary)ov=`<div class="tag">${st.step===1?'Step 1 · tap 2 points on the common line':'Step 2 · tap arm end, vertex, arm end'} <span class="muted">(${q.p1} & ${q.p2})</span></div>`;
   $('#ovTop').innerHTML=ov;
 }
 
 /* ---------- panel ---------- */
-const lvlStr=l=>l===4?'■■■■ Challenge':'■'.repeat(l)+'□'.repeat(4-l);
+const lvlStr=l=>'■'.repeat(l)+'□'.repeat(4-l)+' '+['','Basic','Standard','Hard','Challenge'][l];
 const plh=(n,i)=>`<span class="pl p${i}">${n}</span>`;
 function modeRow(){return `<div class="modes" role="group" aria-label="Round type">${Object.keys(MODES).map(m=>`<button class="mode" data-mode="${m}" data-fk="m${m}" aria-pressed="${st.mode===m}">${MODES[m].label}</button>`).join('')}</div>`;}
 function render(){
@@ -502,15 +505,16 @@ function render(){
     pn.innerHTML=h;draw();return;
   }
   const q=st.q;
+  h+=`<div class="prog" aria-hidden="true">${st.round.map((_,i)=>`<i class="${i<st.hist.length?(st.hist[i].clean?'ok':'meh'):i===st.qi?'cur':''}"></i>`).join('')}</div>`;
   h+=`<div class="card"><div class="eyebrow"><span>Question ${st.qi+1} / ${st.round.length}</span><span aria-label="Level ${q.lvl}">${lvlStr(q.lvl)}</span></div><p class="qtext">${q.text}</p><p class="ask">Name the angle between plane ${plh(q.p1,1)} and plane ${plh(q.p2,2)}.</p></div>`;
   const l=st.line||(st.step===1?st.sel:[]),ang=st.step===2?st.sel:[];
   const sl=(arr,n)=>Array.from({length:n},(_,i)=>`<span class="slot ${arr[i]?'f':''}">${arr[i]||''}</span>`).join('');
   h+=`<div class="card"><div class="step ${st.step===1?'on':'ok'}"><span class="n">${st.step>1?'✓':'1'}</span><span class="t">Common line</span><span class="slots">${sl(l,2)}</span></div>
   <div class="step ${st.done?'ok':st.step===2?'on':''}"><span class="n">${st.done?'✓':'2'}</span><span class="t">Angle</span><span class="slots">∠${sl(ang,3)}</span></div></div>`;
-  h+=`<div class="card"><p class="sec">Construction tools</p><div class="tools">${Object.keys(TOOLS).map(k=>{const T=TOOLS[k];return `<button class="btn ${st.tool===k?'on':''}" data-tool="${k}" data-fk="t${k}" ${st.done?'disabled':''} aria-pressed="${st.tool===k}"><span class="sym">${T.sym}</span>${T.name}<small>${T.sub}</small></button>`;}).join('')}</div>`;
+  if(!st.done||st.cons.length){h+=`<div class="card">`;if(!st.done)h+=`<p class="sec">Construction tools</p><div class="tools">${Object.keys(TOOLS).map(k=>{const T=TOOLS[k];return `<button class="btn ${st.tool===k?'on':''}" data-tool="${k}" data-fk="t${k}" ${st.done?'disabled':''} aria-pressed="${st.tool===k}"><span class="sym">${T.sym}</span>${T.name}<small>${T.sub}</small></button>`;}).join('')}</div>`;else h+=`<p class="sec">Your constructions</p>`;
   if(st.tool)h+=`<div class="howto"><span>${TOOLS[st.tool].how} <b>${st.tsel.join(', ')||'…'}</b></span><button class="btn" data-act="cancelTool" data-fk="ct">Cancel</button></div>`;
-  if(st.cons.length)h+=`<ul class="cons">${st.cons.map(c=>`<li><b>${c.name}</b> = ${c.desc}</li>`).join('')}</ul><div class="actions" style="margin:8px 0 0"><button class="btn" data-act="undoCons" data-fk="uc" ${st.done?'disabled':''}>Undo last point</button></div>`;
-  h+=`</div>`;
+  if(st.cons.length)h+=`<ul class="cons">${st.cons.map(c=>`<li><b>${c.name}</b> = ${c.desc}</li>`).join('')}</ul>${st.done?'':'<div class="actions" style="margin:8px 0 0"><button class="btn" data-act="undoCons" data-fk="uc">Undo last point</button></div>'}`;
+  h+=`</div>`;}
   if(st.msg)h+=`<div class="msg ${st.msg.k}" role="status">${st.msg.t}</div>`;
   if(st.hints)h+=`<div class="card"><p class="sec">Hints</p><ol class="hints">${q.hints.slice(0,st.hints).map(x=>`<li>${x}</li>`).join('')}</ol></div>`;
   if(st.done){
@@ -522,7 +526,7 @@ function render(){
   h+=`<div class="actions">`;
   if(!st.done)h+=`<button class="btn" data-act="hint" data-fk="hint" ${st.hints>=q.hints.length?'disabled':''}>Hint (−4)</button><button class="btn" data-act="undo" data-fk="undo" ${st.sel.length?'':'disabled'}>Undo tap</button><button class="btn ${st.confirmReveal?'warn':''}" data-act="reveal" data-fk="rev">${st.confirmReveal?'Sure? 0 points':'Show answer'}</button>`;
   else h+=`<button class="btn dark" data-act="next" data-fk="next">${st.qi+1<st.round.length?'Next question':'See results'}</button>`;
-  h+=`</div><div class="card"><p class="sec">Points (tap here or on the diagram)</p><div class="chips">${Object.keys(q.pts).map(k=>`<button class="chip ${q.kind[k]} ${st.sel.includes(k)?'sel':''} ${st.tsel.includes(k)?'tsel':''}" data-pt="${k}" data-fk="p${k}" ${st.done||st.lock?'disabled':''}>${k}</button>`).join('')}</div></div>`;
+  h+=`</div>`;if(!st.done)h+=`<div class="card"><p class="sec">Points (tap here or on the diagram)</p><div class="chips">${Object.keys(q.pts).map(k=>`<button class="chip ${q.kind[k]} ${st.sel.includes(k)?'sel':''} ${st.tsel.includes(k)?'tsel':''}" data-pt="${k}" data-fk="p${k}" ${st.done||st.lock?'disabled':''}>${k}</button>`).join('')}</div></div>`;
   pn.innerHTML=h;
   if(fk){const el=pn.querySelector(`[data-fk="${fk}"]`);if(el&&!el.disabled)el.focus();}
   draw();
