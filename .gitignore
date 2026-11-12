@@ -1,0 +1,13 @@
+# Never commit secrets or private files
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*secret*
+*password*
+.DS_Store
+# Student data / exam papers stay out of public repos
+students*/
+*.xlsx
+*.csv

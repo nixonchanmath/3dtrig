@@ -21,3 +21,6 @@ Open `index.html` in a browser, or serve it:
 Live: https://nixonchanmath.github.io/plane-angle-trainer/
 
 GitHub Pages: Settings → Pages → Build and deployment → Deploy from a branch → `main` / `(root)`.
+
+## Notes
+- This repo is public. Do not commit student data or private files here.
